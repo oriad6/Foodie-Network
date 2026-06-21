@@ -15,4 +15,6 @@ const postSchema = new mongoose.Schema({
   }],
 }, { timestamps: true });
 
+postSchema.index({ authorId: 1 });
+
 module.exports = mongoose.model("Post", postSchema);

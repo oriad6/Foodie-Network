@@ -7,5 +7,6 @@ const savedRecipeSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 savedRecipeSchema.index({ userId: 1, postId: 1 }, { unique: true });
+savedRecipeSchema.index({ userId: 1 });
 
 module.exports = mongoose.model("SavedRecipe", savedRecipeSchema);
