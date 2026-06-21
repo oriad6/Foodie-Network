@@ -75,7 +75,7 @@ function Search() {
                       <p className="text-xs text-text-tertiary">@{user.username}</p>
                     </div>
                     <span className="ml-auto text-xs text-amber-500 font-medium">
-                      ★ {user.rating}
+                      {user.rating !== null ? `★ ${user.rating}` : "No rating"}
                     </span>
                   </Link>
                 ))}

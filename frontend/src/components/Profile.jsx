@@ -50,7 +50,11 @@ function Profile() {
               <strong className="text-text-primary">{user.following.length}</strong> Following
             </span>
             <span className="text-text-secondary">
-              <strong className="text-amber-500">★ {user.rating}</strong> Rating
+              {user.rating !== null ? (
+                <><strong className="text-amber-500">★ {user.rating}</strong> Rating</>
+              ) : (
+                <span className="text-text-tertiary">No rating yet</span>
+              )}
             </span>
           </div>
         </div>
