@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { UserContext } from "../App";
 
 function RecipeDetail() {
@@ -191,9 +192,9 @@ function RecipeDetail() {
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-500 mb-4">{error}</p>
-        <Link to="/feed" className="text-orange-600 hover:underline text-sm font-medium">
+      <div className="text-center py-16">
+        <p className="text-text-secondary mb-4 text-sm">{error}</p>
+        <Link to="/feed" className="text-accent hover:text-accent-hover text-sm font-medium transition-colors">
           &larr; Back to feed
         </Link>
       </div>
@@ -201,62 +202,68 @@ function RecipeDetail() {
   }
 
   if (!post) {
-    return <p className="text-center text-gray-400 py-12">Loading...</p>;
+    return <p className="text-center text-text-tertiary py-16 text-sm">Loading...</p>;
   }
 
   const isOwner = post.author.id === CURRENT_USER_ID;
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <Link to="/feed" className="inline-block text-sm text-orange-600 hover:underline font-medium mb-4">
-        &larr; Back to feed
+    <motion.div
+      className="max-w-3xl mx-auto"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+    >
+      <Link
+        to="/feed"
+        className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary font-medium mb-5 transition-colors"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+          <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+        </svg>
+        Back to feed
       </Link>
 
       {/* Hero image */}
-      <img
-        src={post.image}
-        alt={post.title}
-        className="w-full h-72 object-cover rounded-xl shadow-md"
-      />
+      <div className="overflow-hidden rounded-2xl">
+        <img
+          src={post.image}
+          alt={post.title}
+          className="w-full h-72 object-cover"
+        />
+      </div>
 
-      <div className="bg-white rounded-xl shadow-md p-6 mt-4">
+      {/* Main content card */}
+      <div className="card p-6 mt-4">
         {/* Title row */}
-        <div className="flex items-start justify-between gap-4 mb-1">
-          <h1 className="text-2xl font-bold text-gray-800">{post.title}</h1>
+        <div className="flex items-start justify-between gap-4 mb-2">
+          <h1 className="text-2xl font-bold text-text-primary tracking-tight">{post.title}</h1>
           {isOwner && (
-            <div className="flex gap-1 shrink-0">
-              <Link
-                to={`/posts/${post.id}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  // Could open edit modal - for now we'll keep it simple
-                }}
-                className="hidden"
-              />
-              <button onClick={handleDelete} className="p-1.5 text-gray-400 hover:text-red-500 transition" title="Delete">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                  <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.519.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 01.78.72l.5 6a.75.75 0 01-1.49.12l-.5-6a.75.75 0 01.71-.84zm2.84 0a.75.75 0 01.71.84l-.5 6a.75.75 0 11-1.49-.12l.5-6a.75.75 0 01.78-.72z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
+            <button
+              onClick={handleDelete}
+              className="p-2 rounded-lg text-text-tertiary hover:text-red-500 hover:bg-red-50 transition-all shrink-0"
+              title="Delete"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4.5 h-4.5">
+                <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.519.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 01.78.72l.5 6a.75.75 0 01-1.49.12l-.5-6a.75.75 0 01.71-.84zm2.84 0a.75.75 0 01.71.84l-.5 6a.75.75 0 11-1.49-.12l.5-6a.75.75 0 01.78-.72z" clipRule="evenodd" />
+              </svg>
+            </button>
           )}
         </div>
 
         {/* Meta tags */}
-        <div className="flex flex-wrap items-center gap-2 mb-4">
-          <span className="text-xs font-medium bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full">
-            {post.category}
-          </span>
-          <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">
+        <div className="flex flex-wrap items-center gap-2 mb-5">
+          <span className="badge">{post.category}</span>
+          <span className="inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded-full bg-surface-raised border border-border text-text-secondary">
             {post.difficulty}
           </span>
-          <span className="text-xs text-gray-400 ml-auto">
+          <span className="text-xs text-text-tertiary ml-auto">
             {new Date(post.createdAt).toLocaleDateString()}
           </span>
         </div>
 
         {actionError && (
-          <div className="bg-red-50 border border-red-300 text-red-700 text-sm rounded-lg px-3 py-2 mb-4">
+          <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-2.5 mb-5">
             {actionError}
           </div>
         )}
@@ -264,58 +271,63 @@ function RecipeDetail() {
         {/* Author card */}
         <Link
           to={`/users/${post.author.id}`}
-          className="flex items-center gap-3 bg-gray-50 rounded-lg p-3 mb-6 hover:bg-gray-100 transition"
+          className="flex items-center gap-3 bg-surface-raised rounded-xl p-3.5 mb-6 border border-border hover:border-border-strong transition-all"
         >
-          <img src={post.author.avatar} alt={post.author.displayName} className="w-11 h-11 rounded-full" />
+          <img
+            src={post.author.avatar}
+            alt={post.author.displayName}
+            className="w-10 h-10 rounded-full ring-1 ring-border"
+          />
           <div>
-            <p className="text-sm font-semibold text-gray-800">{post.author.displayName}</p>
-            <p className="text-xs text-gray-500">@{post.author.username}</p>
+            <p className="text-sm font-semibold text-text-primary">{post.author.displayName}</p>
+            <p className="text-xs text-text-tertiary">@{post.author.username}</p>
           </div>
         </Link>
 
         {/* Ingredients */}
-        <h2 className="text-lg font-semibold text-gray-800 mb-2">Ingredients</h2>
-        <ul className="mb-6 ml-5 list-disc text-sm text-gray-600 space-y-1">
+        <h2 className="text-base font-semibold text-text-primary mb-2.5">Ingredients</h2>
+        <ul className="mb-6 ml-5 list-disc text-sm text-text-secondary space-y-1.5">
           {post.ingredients.map((ing, i) => (
             <li key={i}>{ing}</li>
           ))}
         </ul>
 
         {/* Instructions */}
-        <h2 className="text-lg font-semibold text-gray-800 mb-2">Instructions</h2>
-        <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed mb-6">
+        <h2 className="text-base font-semibold text-text-primary mb-2.5">Instructions</h2>
+        <p className="text-sm text-text-secondary whitespace-pre-line leading-relaxed mb-6">
           {post.instructions}
         </p>
 
         {/* Actions row */}
-        <div className="flex items-center gap-5 border-t pt-4">
+        <div className="flex items-center gap-5 border-t border-border pt-4">
           <button
             onClick={handleLike}
-            className={`text-sm font-medium ${liked ? "text-red-500" : "text-gray-400"} hover:text-red-500 transition`}
+            className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${liked ? "text-red-500" : "text-text-tertiary hover:text-red-500"}`}
           >
-            {liked ? "♥" : "♡"} {likes.length} {likes.length === 1 ? "like" : "likes"}
+            <span className="text-base">{liked ? "\u2665" : "\u2661"}</span>
+            {likes.length}
           </button>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             {[1, 2, 3, 4, 5].map((star) => (
               <button
                 key={star}
                 type="button"
                 onClick={() => handleRating(star)}
-                className={`text-xl leading-none ${star <= userRating ? "text-yellow-400" : "text-gray-300"} hover:text-yellow-400 transition`}
+                className={`text-lg leading-none transition-colors ${star <= userRating ? "text-amber-400" : "text-text-tertiary/30"} hover:text-amber-400`}
               >
-                ★
+                \u2605
               </button>
             ))}
-            <span className="text-sm text-gray-400 ml-1">({avgRating})</span>
+            <span className="text-xs text-text-tertiary ml-1.5">({avgRating})</span>
           </div>
 
           <button
             onClick={handleSave}
-            className={`ml-auto text-sm font-medium flex items-center gap-1 ${saved ? "text-orange-500" : "text-gray-400"} hover:text-orange-500 transition`}
+            className={`ml-auto flex items-center gap-1.5 text-sm font-medium transition-colors ${saved ? "text-accent" : "text-text-tertiary hover:text-accent"}`}
             title={saved ? "Unsave" : "Save to Recipe Book"}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={saved ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} className="w-5 h-5">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={saved ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} className="w-4.5 h-4.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
             </svg>
             {saved ? "Saved" : "Save"}
@@ -324,23 +336,20 @@ function RecipeDetail() {
       </div>
 
       {/* Comments section */}
-      <div className="bg-white rounded-xl shadow-md p-6 mt-4">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">
+      <div className="card p-6 mt-4">
+        <h2 className="text-base font-semibold text-text-primary mb-4">
           Comments ({comments.length})
         </h2>
 
-        <form onSubmit={handleAddComment} className="flex gap-2 mb-5">
+        <form onSubmit={handleAddComment} className="flex gap-2.5 mb-6">
           <input
             type="text"
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
             placeholder="Add a comment..."
-            className="flex-1 px-4 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"
+            className="input flex-1"
           />
-          <button
-            type="submit"
-            className="px-4 py-2 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition"
-          >
+          <button type="submit" className="btn-primary whitespace-nowrap">
             Post
           </button>
         </form>
@@ -349,29 +358,36 @@ function RecipeDetail() {
           {comments.map((c) => (
             <div key={c.id} className="flex gap-3">
               <Link to={`/users/${c.author.id}`}>
-                <img src={c.author.avatar} alt={c.author.displayName} className="w-9 h-9 rounded-full mt-0.5" />
+                <img
+                  src={c.author.avatar}
+                  alt={c.author.displayName}
+                  className="w-8 h-8 rounded-full ring-1 ring-border mt-0.5"
+                />
               </Link>
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2">
-                  <Link to={`/users/${c.author.id}`} className="text-sm font-semibold text-gray-800 hover:text-orange-600">
+                  <Link
+                    to={`/users/${c.author.id}`}
+                    className="text-sm font-semibold text-text-primary hover:text-accent transition-colors"
+                  >
                     {c.author.displayName}
                   </Link>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-text-tertiary">
                     {new Date(c.createdAt).toLocaleDateString()}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 mt-1">{c.text}</p>
+                <p className="text-sm text-text-secondary mt-0.5">{c.text}</p>
                 <div className="flex items-center gap-3 mt-1.5">
                   <button
                     onClick={() => handleLikeComment(c.id)}
-                    className={`text-xs font-medium ${c.likes.includes(CURRENT_USER_ID) ? "text-red-500" : "text-gray-400"} hover:text-red-500 transition`}
+                    className={`text-xs font-medium transition-colors ${c.likes.includes(CURRENT_USER_ID) ? "text-red-500" : "text-text-tertiary hover:text-red-500"}`}
                   >
-                    {c.likes.includes(CURRENT_USER_ID) ? "♥" : "♡"} {c.likes.length}
+                    {c.likes.includes(CURRENT_USER_ID) ? "\u2665" : "\u2661"} {c.likes.length}
                   </button>
                   {(c.author.id === CURRENT_USER_ID || isOwner) && (
                     <button
                       onClick={() => handleDeleteComment(c.id)}
-                      className="text-xs text-gray-400 hover:text-red-500 transition"
+                      className="text-xs text-text-tertiary hover:text-red-500 transition-colors"
                     >
                       Delete
                     </button>
@@ -381,11 +397,11 @@ function RecipeDetail() {
             </div>
           ))}
           {comments.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-4">No comments yet. Be the first!</p>
+            <p className="text-sm text-text-tertiary text-center py-6">No comments yet. Be the first!</p>
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

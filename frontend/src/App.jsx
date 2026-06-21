@@ -1,5 +1,6 @@
 import { useState, useEffect, createContext } from "react";
 import { Routes, Route, Navigate, NavLink, Outlet } from "react-router-dom";
+import { motion, useScroll, useTransform } from "framer-motion";
 import Feed from "./components/Feed";
 import Search from "./components/Search";
 import Profile from "./components/Profile";
@@ -10,26 +11,49 @@ import RecipeBook from "./components/RecipeBook";
 export const UserContext = createContext(null);
 
 const navLinkClass = ({ isActive }) =>
-  `transition ${
+  `px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
     isActive
-      ? "underline underline-offset-4"
-      : "hover:underline hover:underline-offset-4 opacity-80"
+      ? "bg-accent-subtle text-accent"
+      : "text-text-secondary hover:text-text-primary hover:bg-black/[0.03]"
   }`;
 
 function Layout({ currentUserId }) {
+  const { scrollY } = useScroll();
+
+  const headerHeight = useTransform(scrollY, [0, 80], [64, 52]);
+  const logoScale = useTransform(scrollY, [0, 80], [1, 0.9]);
+  const bgOpacity = useTransform(scrollY, [0, 80], [0.72, 0.92]);
+  const borderOpacity = useTransform(scrollY, [0, 80], [0, 1]);
+  const shadow = useTransform(scrollY, [0, 80], [
+    "0 0 0 0 rgba(0,0,0,0)",
+    "0 1px 12px rgba(0,0,0,0.06)",
+  ]);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-orange-500 text-white py-4 shadow-md sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 flex items-center justify-between">
-          <NavLink to="/feed" className="text-2xl font-bold">
-            Foodie Network
-          </NavLink>
-          <nav className="flex gap-6 text-sm font-medium">
+    <div className="min-h-screen font-sans">
+      <motion.header
+        className="glass sticky top-0 z-50"
+        style={{
+          height: headerHeight,
+          boxShadow: shadow,
+        }}
+      >
+        <motion.div
+          className="absolute inset-0 border-b border-border"
+          style={{ opacity: borderOpacity }}
+        />
+        <div className="relative max-w-5xl mx-auto px-6 h-full flex items-center justify-between">
+          <motion.div style={{ scale: logoScale, originX: 0 }}>
+            <NavLink to="/feed" className="text-lg font-bold tracking-tight text-text-primary">
+              Foodie Network
+            </NavLink>
+          </motion.div>
+          <nav className="flex items-center gap-1">
             <NavLink to="/feed" className={navLinkClass}>
               Feed
             </NavLink>
             <NavLink to="/create" className={navLinkClass}>
-              + Create
+              Create
             </NavLink>
             <NavLink to="/recipe-book" className={navLinkClass}>
               Recipe Book
@@ -44,9 +68,9 @@ function Layout({ currentUserId }) {
             )}
           </nav>
         </div>
-      </header>
+      </motion.header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-5xl mx-auto px-6 py-10">
         <Outlet />
       </main>
     </div>

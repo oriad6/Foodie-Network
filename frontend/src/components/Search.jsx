@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { motion } from "framer-motion";
 
 function Search() {
   const navigate = useNavigate();
@@ -24,34 +25,35 @@ function Search() {
   };
 
   return (
-    <div>
-      <form onSubmit={handleSearch} className="flex gap-3 mb-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+    >
+      <form onSubmit={handleSearch} className="flex gap-2.5 mb-8">
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search users, recipes, or categories..."
-          className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm"
+          className="input flex-1"
         />
-        <button
-          type="submit"
-          className="px-5 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition"
-        >
+        <button type="submit" className="btn-primary">
           Search
         </button>
       </form>
 
       {results === null && (
-        <p className="text-gray-400 text-center py-12">
+        <p className="text-text-tertiary text-center py-16 text-sm">
           Search for users, recipes, or food categories.
         </p>
       )}
 
       {results && (
-        <div className="space-y-6">
+        <div className="space-y-8">
           {results.users.length > 0 && (
             <section>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+              <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-3">
                 Users
               </h3>
               <div className="space-y-2">
@@ -59,20 +61,20 @@ function Search() {
                   <Link
                     key={user.id}
                     to={`/users/${user.id}`}
-                    className="w-full flex items-center gap-3 bg-white p-3 rounded-lg shadow-sm hover:shadow-md transition"
+                    className="card flex items-center gap-3 p-3.5 hover:border-border-strong transition-all"
                   >
                     <img
                       src={user.avatar}
                       alt={user.displayName}
-                      className="w-10 h-10 rounded-full"
+                      className="w-10 h-10 rounded-full ring-1 ring-border"
                     />
                     <div>
-                      <p className="text-sm font-semibold text-gray-800">
+                      <p className="text-sm font-semibold text-text-primary">
                         {user.displayName}
                       </p>
-                      <p className="text-xs text-gray-500">@{user.username}</p>
+                      <p className="text-xs text-text-tertiary">@{user.username}</p>
                     </div>
-                    <span className="ml-auto text-xs text-yellow-500 font-medium">
+                    <span className="ml-auto text-xs text-amber-500 font-medium">
                       ★ {user.rating}
                     </span>
                   </Link>
@@ -83,7 +85,7 @@ function Search() {
 
           {results.posts.length > 0 && (
             <section>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+              <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-3">
                 Recipes
               </h3>
               <div className="space-y-2">
@@ -91,19 +93,19 @@ function Search() {
                   <Link
                     key={post.id}
                     to={`/posts/${post.id}`}
-                    className="flex items-center gap-3 bg-white p-3 rounded-lg shadow-sm hover:shadow-md transition"
+                    className="card flex items-center gap-3.5 p-3.5 hover:border-border-strong transition-all"
                   >
                     <img
                       src={post.image}
                       alt={post.title}
-                      className="w-14 h-14 rounded-lg object-cover"
+                      className="w-14 h-14 rounded-xl object-cover"
                     />
                     <div>
-                      <p className="text-sm font-semibold text-gray-800">
+                      <p className="text-sm font-semibold text-text-primary">
                         {post.title}
                       </p>
-                      <p className="text-xs text-gray-500">
-                        {post.category} &middot; {post.difficulty}
+                      <p className="text-xs text-text-tertiary">
+                        {post.category} · {post.difficulty}
                       </p>
                     </div>
                   </Link>
@@ -114,7 +116,7 @@ function Search() {
 
           {results.categories.length > 0 && (
             <section>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+              <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-3">
                 Categories
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -125,7 +127,7 @@ function Search() {
                     onClick={() =>
                       navigate(`/feed?category=${encodeURIComponent(cat)}`)
                     }
-                    className="px-3 py-1.5 bg-orange-100 text-orange-700 rounded-full text-sm font-medium hover:bg-orange-200 transition"
+                    className="badge hover:bg-accent hover:text-white transition-all"
                   >
                     {cat}
                   </button>
@@ -137,13 +139,13 @@ function Search() {
           {results.users.length === 0 &&
             results.posts.length === 0 &&
             results.categories.length === 0 && (
-              <p className="text-gray-400 text-center py-8">
+              <p className="text-text-tertiary text-center py-12 text-sm">
                 No results found for "{searchParams.get("q")}".
               </p>
             )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
