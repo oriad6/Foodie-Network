@@ -2,12 +2,21 @@ const SavedRecipe = require("../schemas/SavedRecipe");
 const Collection = require("../schemas/Collection");
 const postModel = require("./postModel");
 
+function normalizeSaved(sr, post) {
+  return {
+    id: sr._id.toString(),
+    postId: sr.postId.toString(),
+    collectionId: sr.collectionId ? sr.collectionId.toString() : null,
+    post,
+  };
+}
+
 async function getSavedRecipes(userId) {
   const saved = await SavedRecipe.find({ userId }).lean();
   const results = [];
   for (const sr of saved) {
     const post = await postModel.findByIdEnriched(sr.postId);
-    if (post) results.push({ ...sr, id: sr._id, post });
+    if (post) results.push(normalizeSaved(sr, post));
   }
   return results;
 }
@@ -18,7 +27,7 @@ async function getSavedByCollection(userId, collectionId) {
   const results = [];
   for (const sr of saved) {
     const post = await postModel.findByIdEnriched(sr.postId);
-    if (post) results.push({ ...sr, id: sr._id, post });
+    if (post) results.push(normalizeSaved(sr, post));
   }
   return results;
 }
@@ -41,7 +50,7 @@ async function saveRecipe(userId, postId, collectionId = null) {
   }
 
   const entry = await SavedRecipe.create({ userId, postId, collectionId });
-  return { entry: { ...entry.toObject(), id: entry._id, post } };
+  return { entry: normalizeSaved(entry.toObject(), post) };
 }
 
 async function unsaveRecipe(userId, postId) {
@@ -61,11 +70,21 @@ async function moveToCollection(userId, postId, collectionId) {
 
   entry.collectionId = collectionId;
   await entry.save();
-  return { entry: entry.toObject() };
+  const obj = entry.toObject();
+  return { entry: { id: obj._id.toString(), postId: obj.postId.toString(), collectionId: obj.collectionId ? obj.collectionId.toString() : null } };
+}
+
+function normalizeCollection(c) {
+  return {
+    id: c._id.toString(),
+    name: c.name,
+    description: c.description || "",
+  };
 }
 
 async function getCollections(userId) {
-  return Collection.find({ userId }).lean();
+  const cols = await Collection.find({ userId }).lean();
+  return cols.map(normalizeCollection);
 }
 
 async function createCollection(userId, name, description = "") {
@@ -76,7 +95,7 @@ async function createCollection(userId, name, description = "") {
     name: name.trim(),
     description: description.trim(),
   });
-  return { collection: col.toObject() };
+  return { collection: normalizeCollection(col.toObject()) };
 }
 
 async function updateCollection(userId, collectionId, data) {
@@ -86,7 +105,7 @@ async function updateCollection(userId, collectionId, data) {
   if (data.name !== undefined) col.name = data.name.trim();
   if (data.description !== undefined) col.description = data.description.trim();
   await col.save();
-  return { collection: col.toObject() };
+  return { collection: normalizeCollection(col.toObject()) };
 }
 
 async function deleteCollection(userId, collectionId) {

@@ -1,6 +1,100 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+
+function CollectionPopover({ postId, currentCollectionId, collections, onMove, onCreateAndMove, onClose }) {
+  const ref = useRef(null);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newNameError, setNewNameError] = useState("");
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) onClose();
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [onClose]);
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    setNewNameError("");
+    try {
+      await onCreateAndMove(postId, newName.trim());
+      onClose();
+    } catch {
+      setNewNameError("Failed to create collection.");
+    }
+  };
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 4, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 4, scale: 0.95 }}
+      transition={{ duration: 0.15 }}
+      className="absolute bottom-full left-0 mb-2 w-56 card p-2 shadow-lg z-10"
+    >
+      <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wider px-2 py-1.5">
+        Add to collection
+      </p>
+
+      <button
+        onClick={() => { onMove(postId, null); onClose(); }}
+        className={`w-full text-left px-2.5 py-2 rounded-lg text-sm transition-all ${
+          currentCollectionId === null
+            ? "bg-accent-subtle text-accent font-medium"
+            : "text-text-secondary hover:bg-black/[0.03]"
+        }`}
+      >
+        Unsorted
+      </button>
+
+      {collections.map((c) => (
+        <button
+          key={c.id}
+          onClick={() => { onMove(postId, c.id); onClose(); }}
+          className={`w-full text-left px-2.5 py-2 rounded-lg text-sm transition-all ${
+            currentCollectionId === c.id
+              ? "bg-accent-subtle text-accent font-medium"
+              : "text-text-secondary hover:bg-black/[0.03]"
+          }`}
+        >
+          {c.name}
+        </button>
+      ))}
+
+      <hr className="my-1.5 border-border" />
+
+      {creating ? (
+        <form onSubmit={handleCreate} className="px-1 space-y-1.5">
+          {newNameError && <p className="text-xs text-red-500">{newNameError}</p>}
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Collection name"
+            className="input text-sm py-1.5"
+            autoFocus
+          />
+          <div className="flex gap-1.5">
+            <button type="submit" className="btn-primary flex-1 py-1.5 text-xs">Create</button>
+            <button type="button" onClick={() => setCreating(false)} className="btn-secondary flex-1 py-1.5 text-xs">Cancel</button>
+          </div>
+        </form>
+      ) : (
+        <button
+          onClick={() => setCreating(true)}
+          className="w-full text-left px-2.5 py-2 rounded-lg text-sm text-accent hover:bg-accent-subtle transition-all font-medium"
+        >
+          + New Collection
+        </button>
+      )}
+    </motion.div>
+  );
+}
 
 function RecipeBook() {
   const [collections, setCollections] = useState([]);
@@ -14,11 +108,13 @@ function RecipeBook() {
   const [newDesc, setNewDesc] = useState("");
   const [formError, setFormError] = useState("");
 
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
 
-  const [movingPostId, setMovingPostId] = useState(null);
+  const [popoverPostId, setPopoverPostId] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -91,7 +187,7 @@ function RecipeBook() {
   };
 
   const handleDeleteCollection = async (id) => {
-    if (!window.confirm("Delete this collection? Recipes will be moved to unsorted.")) return;
+    setConfirmDeleteId(null);
     try {
       const res = await fetch(`/api/recipe-book/collections/${id}`, { method: "DELETE" });
       if (res.ok) {
@@ -117,11 +213,22 @@ function RecipeBook() {
         setSavedRecipes((prev) =>
           prev.map((sr) => (sr.postId === postId ? { ...sr, collectionId } : sr))
         );
-        setMovingPostId(null);
       }
     } catch {
       setError("Failed to move recipe.");
     }
+  };
+
+  const handleCreateAndMove = async (postId, name) => {
+    const res = await fetch("/api/recipe-book/collections", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, description: "" }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    setCollections((prev) => [...prev, data]);
+    await handleMoveToCollection(postId, data.id);
   };
 
   const filteredRecipes =
@@ -234,7 +341,7 @@ function RecipeBook() {
                         </svg>
                       </button>
                       <button
-                        onClick={() => handleDeleteCollection(col.id)}
+                        onClick={() => setConfirmDeleteId(col.id)}
                         className="p-1.5 rounded-lg text-text-tertiary hover:text-red-500 hover:bg-red-50 transition-all"
                         title="Delete"
                       >
@@ -316,37 +423,31 @@ function RecipeBook() {
                       <span className="text-xs text-text-tertiary">{sr.post.difficulty}</span>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      {movingPostId === sr.postId ? (
-                        <select
-                          autoFocus
-                          className="input flex-1 text-xs py-1.5"
-                          value={sr.collectionId ?? ""}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            handleMoveToCollection(sr.postId, val === "" ? null : parseInt(val));
-                          }}
-                          onBlur={() => setMovingPostId(null)}
-                        >
-                          <option value="">Unsorted</option>
-                          {collections.map((c) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <button
-                          onClick={() => setMovingPostId(sr.postId)}
-                          className="text-xs text-text-tertiary hover:text-accent transition-colors flex items-center gap-1"
-                          title="Move to collection"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-                            <path d="M3.75 3A1.75 1.75 0 002 4.75v3.26a3.235 3.235 0 011.75-.51h12.5c.644 0 1.245.188 1.75.51V6.75A1.75 1.75 0 0016.25 5h-4.836a.25.25 0 01-.177-.073L9.823 3.513A1.75 1.75 0 008.586 3H3.75zM3.75 9A1.75 1.75 0 002 10.75v4.5c0 .966.784 1.75 1.75 1.75h12.5A1.75 1.75 0 0018 15.25v-4.5A1.75 1.75 0 0016.25 9H3.75z" />
-                          </svg>
-                          {sr.collectionId
-                            ? collections.find((c) => c.id === sr.collectionId)?.name || "Move"
-                            : "Move to..."}
-                        </button>
-                      )}
+                    <div className="flex items-center gap-2 relative">
+                      <button
+                        onClick={() => setPopoverPostId(popoverPostId === sr.postId ? null : sr.postId)}
+                        className="text-xs text-text-tertiary hover:text-accent transition-colors flex items-center gap-1"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                          <path d="M3.75 3A1.75 1.75 0 002 4.75v3.26a3.235 3.235 0 011.75-.51h12.5c.644 0 1.245.188 1.75.51V6.75A1.75 1.75 0 0016.25 5h-4.836a.25.25 0 01-.177-.073L9.823 3.513A1.75 1.75 0 008.586 3H3.75zM3.75 9A1.75 1.75 0 002 10.75v4.5c0 .966.784 1.75 1.75 1.75h12.5A1.75 1.75 0 0018 15.25v-4.5A1.75 1.75 0 0016.25 9H3.75z" />
+                        </svg>
+                        {sr.collectionId
+                          ? collections.find((c) => c.id === sr.collectionId)?.name || "Collection"
+                          : "Add to collection"}
+                      </button>
+
+                      <AnimatePresence>
+                        {popoverPostId === sr.postId && (
+                          <CollectionPopover
+                            postId={sr.postId}
+                            currentCollectionId={sr.collectionId}
+                            collections={collections}
+                            onMove={handleMoveToCollection}
+                            onCreateAndMove={handleCreateAndMove}
+                            onClose={() => setPopoverPostId(null)}
+                          />
+                        )}
+                      </AnimatePresence>
 
                       <button
                         onClick={() => handleUnsave(sr.postId)}
@@ -365,6 +466,47 @@ function RecipeBook() {
           )}
         </div>
       </div>
+      {/* Delete confirmation modal */}
+      <AnimatePresence>
+        {confirmDeleteId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+            onClick={() => setConfirmDeleteId(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="card p-6 w-full max-w-sm mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-base font-semibold text-text-primary mb-2">Delete collection?</h3>
+              <p className="text-sm text-text-secondary mb-5">
+                Saved recipes in this collection will be moved to Unsorted. This action cannot be undone.
+              </p>
+              <div className="flex gap-2.5 justify-end">
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteCollection(confirmDeleteId)}
+                  className="px-4 py-2 rounded-[0.625rem] text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-all"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
