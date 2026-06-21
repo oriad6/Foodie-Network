@@ -1,4 +1,4 @@
 const PORT = 3001;
-const CURRENT_USER_ID = 1; // Simulated logged-in user
+const CURRENT_USERNAME = "chef_maria"; // Simulated logged-in user
 
-module.exports = { PORT, CURRENT_USER_ID };
+module.exports = { PORT, CURRENT_USERNAME };

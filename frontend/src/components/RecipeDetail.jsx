@@ -1,13 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-
-const CURRENT_USER_ID = 1;
-
-function getUserRating(ratings) {
-  return ratings.find((r) => r.userId === CURRENT_USER_ID)?.score ?? 0;
-}
+import { UserContext } from "../App";
 
 function RecipeDetail() {
+  const CURRENT_USER_ID = useContext(UserContext);
+  const findUserRating = (r) => r.find((x) => x.userId === CURRENT_USER_ID)?.score ?? 0;
   const { id } = useParams();
   const navigate = useNavigate();
   const [post, setPost] = useState(null);
@@ -45,7 +42,7 @@ function RecipeDetail() {
         setLikes(data.likes);
         setLiked(data.likes.includes(CURRENT_USER_ID));
         setRatings(data.ratings);
-        setUserRating(getUserRating(data.ratings));
+        setUserRating(findUserRating(data.ratings));
       })
       .catch(() => setError("Recipe not found."));
   }, [id]);
@@ -105,7 +102,7 @@ function RecipeDetail() {
         return;
       }
       setRatings(data.ratings);
-      setUserRating(getUserRating(data.ratings));
+      setUserRating(findUserRating(data.ratings));
     } catch {
       setRatings(prevRatings);
       setUserRating(prevUserRating);

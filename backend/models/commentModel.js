@@ -1,12 +1,15 @@
-const { comments, posts } = require("../data/mockData");
-const userModel = require("./userModel");
+const Comment = require("../schemas/Comment");
+const Post = require("../schemas/Post");
+const User = require("../schemas/User");
 
-function enrichComment(comment) {
-  const author = userModel.findById(comment.authorId);
+async function enrichComment(comment) {
+  const author = await User.findById(comment.authorId).lean();
   return {
     ...comment,
+    id: comment._id,
+    createdAt: comment.createdAt || comment._id.getTimestamp().toISOString(),
     author: {
-      id: author.id,
+      id: author._id,
       username: author.username,
       displayName: author.displayName,
       avatar: author.avatar,
@@ -14,58 +17,50 @@ function enrichComment(comment) {
   };
 }
 
-function getByPostId(postId) {
-  return comments
-    .filter((c) => c.postId === postId)
-    .map(enrichComment);
+async function getByPostId(postId) {
+  const comments = await Comment.find({ postId }).lean();
+  return Promise.all(comments.map(enrichComment));
 }
 
-function create(postId, authorId, text) {
-  const post = posts.find((p) => p.id === postId);
+async function create(postId, authorId, text) {
+  const post = await Post.findById(postId);
   if (!post) return { error: "post_not_found" };
-
   if (!text || !text.trim()) return { error: "text_required" };
 
-  const newComment = {
-    id: comments.length > 0 ? Math.max(...comments.map((c) => c.id)) + 1 : 1,
+  const comment = await Comment.create({
     postId,
     authorId,
     text: text.trim(),
-    likes: [],
-    createdAt: new Date().toISOString(),
-  };
-  comments.push(newComment);
-  return { comment: enrichComment(newComment) };
+  });
+  return { comment: await enrichComment(comment.toObject()) };
 }
 
-function deleteComment(commentId, userId) {
-  const index = comments.findIndex((c) => c.id === commentId);
-  if (index === -1) return { error: "not_found" };
+async function deleteComment(commentId, userId) {
+  const comment = await Comment.findById(commentId);
+  if (!comment) return { error: "not_found" };
 
-  const comment = comments[index];
-  const post = posts.find((p) => p.id === comment.postId);
+  const post = await Post.findById(comment.postId);
 
-  // Allow deletion by comment author or post owner
-  if (comment.authorId !== userId && (!post || post.authorId !== userId)) {
+  if (!comment.authorId.equals(userId) && (!post || !post.authorId.equals(userId))) {
     return { error: "forbidden" };
   }
 
-  comments.splice(index, 1);
+  await Comment.findByIdAndDelete(commentId);
   return { success: true };
 }
 
-function toggleLike(commentId, userId) {
-  const comment = comments.find((c) => c.id === commentId);
+async function toggleLike(commentId, userId) {
+  const comment = await Comment.findById(commentId);
   if (!comment) return { error: "not_found" };
 
-  const likeIndex = comment.likes.indexOf(userId);
+  const likeIndex = comment.likes.findIndex((lid) => lid.equals(userId));
   if (likeIndex >= 0) {
     comment.likes.splice(likeIndex, 1);
   } else {
     comment.likes.push(userId);
   }
-
-  return { comment: enrichComment(comment) };
+  await comment.save();
+  return { comment: await enrichComment(comment.toObject()) };
 }
 
 module.exports = { getByPostId, create, deleteComment, toggleLike };

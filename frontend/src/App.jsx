@@ -1,3 +1,4 @@
+import { useState, useEffect, createContext } from "react";
 import { Routes, Route, Navigate, NavLink, Outlet } from "react-router-dom";
 import Feed from "./components/Feed";
 import Search from "./components/Search";
@@ -6,7 +7,7 @@ import CreateRecipe from "./components/CreateRecipe";
 import RecipeDetail from "./components/RecipeDetail";
 import RecipeBook from "./components/RecipeBook";
 
-const CURRENT_USER_ID = 1;
+export const UserContext = createContext(null);
 
 const navLinkClass = ({ isActive }) =>
   `transition ${
@@ -15,7 +16,7 @@ const navLinkClass = ({ isActive }) =>
       : "hover:underline hover:underline-offset-4 opacity-80"
   }`;
 
-function Layout() {
+function Layout({ currentUserId }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-orange-500 text-white py-4 shadow-md sticky top-0 z-10">
@@ -36,9 +37,11 @@ function Layout() {
             <NavLink to="/search" className={navLinkClass}>
               Search
             </NavLink>
-            <NavLink to={`/users/${CURRENT_USER_ID}`} className={navLinkClass}>
-              Profile
-            </NavLink>
+            {currentUserId && (
+              <NavLink to={`/users/${currentUserId}`} className={navLinkClass}>
+                Profile
+              </NavLink>
+            )}
           </nav>
         </div>
       </header>
@@ -51,18 +54,29 @@ function Layout() {
 }
 
 function App() {
+  const [currentUserId, setCurrentUserId] = useState(null);
+
+  useEffect(() => {
+    fetch("/api/me")
+      .then((res) => res.json())
+      .then((data) => setCurrentUserId(data.userId))
+      .catch(() => {});
+  }, []);
+
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route index element={<Navigate to="/feed" replace />} />
-        <Route path="feed" element={<Feed />} />
-        <Route path="posts/:id" element={<RecipeDetail />} />
-        <Route path="users/:id" element={<Profile />} />
-        <Route path="recipe-book" element={<RecipeBook />} />
-        <Route path="search" element={<Search />} />
-        <Route path="create" element={<CreateRecipe />} />
-      </Route>
-    </Routes>
+    <UserContext.Provider value={currentUserId}>
+      <Routes>
+        <Route element={<Layout currentUserId={currentUserId} />}>
+          <Route index element={<Navigate to="/feed" replace />} />
+          <Route path="feed" element={<Feed />} />
+          <Route path="posts/:id" element={<RecipeDetail />} />
+          <Route path="users/:id" element={<Profile />} />
+          <Route path="recipe-book" element={<RecipeBook />} />
+          <Route path="search" element={<Search />} />
+          <Route path="create" element={<CreateRecipe />} />
+        </Route>
+      </Routes>
+    </UserContext.Provider>
   );
 }
 

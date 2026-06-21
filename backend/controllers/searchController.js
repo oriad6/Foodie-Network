@@ -2,15 +2,17 @@ const userModel = require("../models/userModel");
 const postModel = require("../models/postModel");
 const categoryModel = require("../models/categoryModel");
 
-function search(req, res) {
+async function search(req, res) {
   const { q } = req.query;
   if (!q) return res.json({ users: [], posts: [], categories: [] });
 
-  res.json({
-    users: userModel.search(q),
-    posts: postModel.search(q),
-    categories: categoryModel.search(q),
-  });
+  const [users, posts, categories] = await Promise.all([
+    userModel.search(q),
+    postModel.search(q),
+    categoryModel.search(q),
+  ]);
+
+  res.json({ users, posts, categories });
 }
 
 module.exports = { search };

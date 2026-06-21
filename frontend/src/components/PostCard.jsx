@@ -1,25 +1,24 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import { Link } from "react-router-dom";
-
-const CURRENT_USER_ID = 1;
-
-function getUserRating(ratings) {
-  return ratings.find((r) => r.userId === CURRENT_USER_ID)?.score ?? 0;
-}
+import { UserContext } from "../App";
 
 function PostCard({ post, onDelete, onUpdate }) {
+  const CURRENT_USER_ID = useContext(UserContext);
+  const findUserRating = (r) => r.find((x) => x.userId === CURRENT_USER_ID)?.score ?? 0;
+  const isLiked = (l) => l.includes(CURRENT_USER_ID);
+
   const [likes, setLikes] = useState(post.likes);
   const [ratings, setRatings] = useState(post.ratings);
-  const [liked, setLiked] = useState(() => post.likes.includes(CURRENT_USER_ID));
-  const [userRating, setUserRating] = useState(() => getUserRating(post.ratings));
+  const [liked, setLiked] = useState(() => isLiked(post.likes));
+  const [userRating, setUserRating] = useState(() => findUserRating(post.ratings));
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     setLikes(post.likes);
     setRatings(post.ratings);
-    setLiked(post.likes.includes(CURRENT_USER_ID));
-    setUserRating(getUserRating(post.ratings));
-  }, [post.id, post.likes, post.ratings]);
+    setLiked(isLiked(post.likes));
+    setUserRating(findUserRating(post.ratings));
+  }, [post.id, post.likes, post.ratings, CURRENT_USER_ID]);
 
   useEffect(() => {
     fetch(`/api/recipe-book/saved/${post.id}/check`)
@@ -118,7 +117,7 @@ function PostCard({ post, onDelete, onUpdate }) {
         return;
       }
       setRatings(data.ratings);
-      setUserRating(getUserRating(data.ratings));
+      setUserRating(findUserRating(data.ratings));
     } catch {
       setRatings(prevRatings);
       setUserRating(prevUserRating);

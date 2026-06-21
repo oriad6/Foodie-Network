@@ -1,12 +1,14 @@
-const { posts } = require("../data/mockData");
-const userModel = require("./userModel");
+const Post = require("../schemas/Post");
+const User = require("../schemas/User");
 
-function enrichPost(post) {
-  const author = userModel.findById(post.authorId);
+async function enrichPost(post) {
+  const author = await User.findById(post.authorId).lean();
   return {
     ...post,
+    id: post._id,
+    createdAt: post.createdAt || post._id.getTimestamp().toISOString(),
     author: {
-      id: author.id,
+      id: author._id,
       username: author.username,
       displayName: author.displayName,
       avatar: author.avatar,
@@ -14,51 +16,46 @@ function enrichPost(post) {
   };
 }
 
-function findById(id) {
-  return posts.find((p) => p.id === parseInt(id));
+async function findAll(category) {
+  const filter = category
+    ? { category: new RegExp(`^${category}$`, "i") }
+    : {};
+  const posts = await Post.find(filter).lean();
+  return Promise.all(posts.map(enrichPost));
 }
 
-function findAll(category) {
-  let feed = posts;
-
-  if (category) {
-    feed = feed.filter((p) => p.category.toLowerCase() === category.toLowerCase());
-  }
-
-  return feed.map(enrichPost);
+async function findByIdEnriched(id) {
+  const post = await Post.findById(id).lean();
+  if (!post) return null;
+  return enrichPost(post);
 }
 
-function findByIdEnriched(id) {
-  const post = findById(id);
-  return post ? enrichPost(post) : null;
-}
-
-function toggleLike(id, userId) {
-  const post = findById(id);
+async function toggleLike(id, userId) {
+  const post = await Post.findById(id);
   if (!post) return null;
 
-  const likeIndex = post.likes.indexOf(userId);
+  const likeIndex = post.likes.findIndex((lid) => lid.equals(userId));
   if (likeIndex >= 0) {
     post.likes.splice(likeIndex, 1);
   } else {
     post.likes.push(userId);
   }
-
-  return enrichPost(post);
+  await post.save();
+  return enrichPost(post.toObject());
 }
 
-function setRating(id, userId, score) {
-  const post = findById(id);
+async function setRating(id, userId, score) {
+  const post = await Post.findById(id);
   if (!post) return null;
 
-  const ratingIndex = post.ratings.findIndex((r) => r.userId === userId);
-  if (ratingIndex >= 0) {
-    post.ratings[ratingIndex].score = score;
+  const existing = post.ratings.find((r) => r.userId.equals(userId));
+  if (existing) {
+    existing.score = score;
   } else {
     post.ratings.push({ userId, score });
   }
-
-  return enrichPost(post);
+  await post.save();
+  return enrichPost(post.toObject());
 }
 
 function validateRecipeFields({ title, ingredients, instructions, difficulty, category }) {
@@ -71,9 +68,8 @@ function validateRecipeFields({ title, ingredients, instructions, difficulty, ca
   return errors;
 }
 
-function create(data, authorId) {
-  const newPost = {
-    id: posts.length > 0 ? posts[posts.length - 1].id + 1 : 1,
+async function create(data, authorId) {
+  const post = await Post.create({
     authorId,
     title: data.title.trim(),
     image: data.image || `https://placehold.co/600x400?text=${encodeURIComponent(data.title.trim())}`,
@@ -81,52 +77,40 @@ function create(data, authorId) {
     ingredients: data.ingredients,
     difficulty: data.difficulty,
     category: data.category,
-    likes: [],
-    ratings: [],
-    createdAt: new Date().toISOString(),
-  };
-
-  posts.push(newPost);
-  return enrichPost(newPost);
+  });
+  return enrichPost(post.toObject());
 }
 
-function update(id, data, userId) {
-  const postIndex = posts.findIndex((p) => p.id === parseInt(id));
-  if (postIndex === -1) return { error: "not_found" };
+async function update(id, data, userId) {
+  const post = await Post.findById(id);
+  if (!post) return { error: "not_found" };
+  if (!post.authorId.equals(userId)) return { error: "forbidden" };
 
-  const post = posts[postIndex];
-  if (post.authorId !== userId) return { error: "forbidden" };
+  post.title = data.title.trim();
+  post.ingredients = data.ingredients;
+  post.instructions = data.instructions.trim();
+  post.image = data.image || post.image;
+  post.difficulty = data.difficulty;
+  post.category = data.category;
+  await post.save();
 
-  posts[postIndex] = {
-    ...post,
-    title: data.title.trim(),
-    ingredients: data.ingredients,
-    instructions: data.instructions.trim(),
-    image: data.image || post.image,
-    difficulty: data.difficulty,
-    category: data.category,
-  };
-
-  return { post: enrichPost(posts[postIndex]) };
+  return { post: await enrichPost(post.toObject()) };
 }
 
-function deletePost(id, userId) {
-  const postIndex = posts.findIndex((p) => p.id === parseInt(id));
-  if (postIndex === -1) return { error: "not_found" };
+async function deletePost(id, userId) {
+  const post = await Post.findById(id);
+  if (!post) return { error: "not_found" };
+  if (!post.authorId.equals(userId)) return { error: "forbidden" };
 
-  if (posts[postIndex].authorId !== userId) return { error: "forbidden" };
-
-  posts.splice(postIndex, 1);
+  await Post.findByIdAndDelete(id);
   return { success: true };
 }
 
-function search(query) {
-  const q = query.toLowerCase();
-  return posts.filter(
-    (p) =>
-      p.title.toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q)
-  );
+async function search(query) {
+  const regex = new RegExp(query, "i");
+  return Post.find({
+    $or: [{ title: regex }, { category: regex }],
+  }).lean();
 }
 
 module.exports = {

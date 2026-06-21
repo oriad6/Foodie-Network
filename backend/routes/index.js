@@ -8,9 +8,11 @@ const searchRoutes = require("./search.routes");
 const recipeBookRoutes = require("./recipeBook.routes");
 const commentsRoutes = require("./comments.routes");
 const uploadRoutes = require("./upload.routes");
+const authRoutes = require("./auth.routes");
 
 const router = Router();
 
+router.use(authRoutes);
 router.use(healthRoutes);
 router.use(categoriesRoutes);
 router.use(postsRoutes);

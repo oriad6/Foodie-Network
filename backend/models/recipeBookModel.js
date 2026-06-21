@@ -1,114 +1,102 @@
-const { savedRecipes, collections } = require("../data/mockData");
+const SavedRecipe = require("../schemas/SavedRecipe");
+const Collection = require("../schemas/Collection");
 const postModel = require("./postModel");
 
-function getSavedRecipes(userId) {
-  return savedRecipes
-    .filter((sr) => sr.userId === userId)
-    .map((sr) => {
-      const post = postModel.findByIdEnriched(sr.postId);
-      return post ? { ...sr, post } : null;
-    })
-    .filter(Boolean);
+async function getSavedRecipes(userId) {
+  const saved = await SavedRecipe.find({ userId }).lean();
+  const results = [];
+  for (const sr of saved) {
+    const post = await postModel.findByIdEnriched(sr.postId);
+    if (post) results.push({ ...sr, id: sr._id, post });
+  }
+  return results;
 }
 
-function getSavedByCollection(userId, collectionId) {
-  return savedRecipes
-    .filter(
-      (sr) =>
-        sr.userId === userId &&
-        (collectionId === null ? sr.collectionId === null : sr.collectionId === collectionId)
-    )
-    .map((sr) => {
-      const post = postModel.findByIdEnriched(sr.postId);
-      return post ? { ...sr, post } : null;
-    })
-    .filter(Boolean);
+async function getSavedByCollection(userId, collectionId) {
+  const filter = { userId, collectionId: collectionId };
+  const saved = await SavedRecipe.find(filter).lean();
+  const results = [];
+  for (const sr of saved) {
+    const post = await postModel.findByIdEnriched(sr.postId);
+    if (post) results.push({ ...sr, id: sr._id, post });
+  }
+  return results;
 }
 
-function isRecipeSaved(userId, postId) {
-  return savedRecipes.some((sr) => sr.userId === userId && sr.postId === postId);
+async function isRecipeSaved(userId, postId) {
+  const count = await SavedRecipe.countDocuments({ userId, postId });
+  return count > 0;
 }
 
-function saveRecipe(userId, postId, collectionId = null) {
-  const existing = savedRecipes.find((sr) => sr.userId === userId && sr.postId === postId);
+async function saveRecipe(userId, postId, collectionId = null) {
+  const existing = await SavedRecipe.findOne({ userId, postId });
   if (existing) return { error: "already_saved" };
 
-  const post = postModel.findByIdEnriched(postId);
+  const post = await postModel.findByIdEnriched(postId);
   if (!post) return { error: "not_found" };
 
   if (collectionId !== null) {
-    const col = collections.find((c) => c.id === collectionId && c.userId === userId);
+    const col = await Collection.findOne({ _id: collectionId, userId });
     if (!col) return { error: "collection_not_found" };
   }
 
-  const entry = { userId, postId, collectionId, savedAt: new Date().toISOString() };
-  savedRecipes.push(entry);
-  return { entry: { ...entry, post } };
+  const entry = await SavedRecipe.create({ userId, postId, collectionId });
+  return { entry: { ...entry.toObject(), id: entry._id, post } };
 }
 
-function unsaveRecipe(userId, postId) {
-  const index = savedRecipes.findIndex((sr) => sr.userId === userId && sr.postId === postId);
-  if (index === -1) return { error: "not_found" };
-  savedRecipes.splice(index, 1);
+async function unsaveRecipe(userId, postId) {
+  const result = await SavedRecipe.findOneAndDelete({ userId, postId });
+  if (!result) return { error: "not_found" };
   return { success: true };
 }
 
-function moveToCollection(userId, postId, collectionId) {
-  const entry = savedRecipes.find((sr) => sr.userId === userId && sr.postId === postId);
+async function moveToCollection(userId, postId, collectionId) {
+  const entry = await SavedRecipe.findOne({ userId, postId });
   if (!entry) return { error: "not_saved" };
 
   if (collectionId !== null) {
-    const col = collections.find((c) => c.id === collectionId && c.userId === userId);
+    const col = await Collection.findOne({ _id: collectionId, userId });
     if (!col) return { error: "collection_not_found" };
   }
 
   entry.collectionId = collectionId;
-  return { entry };
+  await entry.save();
+  return { entry: entry.toObject() };
 }
 
-function getCollections(userId) {
-  return collections.filter((c) => c.userId === userId);
+async function getCollections(userId) {
+  return Collection.find({ userId }).lean();
 }
 
-function getCollectionById(userId, collectionId) {
-  return collections.find((c) => c.id === collectionId && c.userId === userId) || null;
-}
-
-function createCollection(userId, name, description = "") {
+async function createCollection(userId, name, description = "") {
   if (!name || !name.trim()) return { error: "name_required" };
 
-  const newCol = {
-    id: collections.length > 0 ? Math.max(...collections.map((c) => c.id)) + 1 : 1,
+  const col = await Collection.create({
     userId,
     name: name.trim(),
     description: description.trim(),
-    createdAt: new Date().toISOString(),
-  };
-  collections.push(newCol);
-  return { collection: newCol };
+  });
+  return { collection: col.toObject() };
 }
 
-function updateCollection(userId, collectionId, data) {
-  const col = collections.find((c) => c.id === collectionId && c.userId === userId);
+async function updateCollection(userId, collectionId, data) {
+  const col = await Collection.findOne({ _id: collectionId, userId });
   if (!col) return { error: "not_found" };
 
   if (data.name !== undefined) col.name = data.name.trim();
   if (data.description !== undefined) col.description = data.description.trim();
-  return { collection: col };
+  await col.save();
+  return { collection: col.toObject() };
 }
 
-function deleteCollection(userId, collectionId) {
-  const index = collections.findIndex((c) => c.id === collectionId && c.userId === userId);
-  if (index === -1) return { error: "not_found" };
+async function deleteCollection(userId, collectionId) {
+  const col = await Collection.findOneAndDelete({ _id: collectionId, userId });
+  if (!col) return { error: "not_found" };
 
-  // Move recipes from this collection back to unsorted
-  savedRecipes
-    .filter((sr) => sr.userId === userId && sr.collectionId === collectionId)
-    .forEach((sr) => {
-      sr.collectionId = null;
-    });
-
-  collections.splice(index, 1);
+  await SavedRecipe.updateMany(
+    { userId, collectionId },
+    { $set: { collectionId: null } }
+  );
   return { success: true };
 }
 
@@ -120,7 +108,6 @@ module.exports = {
   unsaveRecipe,
   moveToCollection,
   getCollections,
-  getCollectionById,
   createCollection,
   updateCollection,
   deleteCollection,

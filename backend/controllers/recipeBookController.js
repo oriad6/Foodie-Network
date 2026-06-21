@@ -1,29 +1,27 @@
-const { CURRENT_USER_ID } = require("../config/constants");
 const recipeBookModel = require("../models/recipeBookModel");
 
-function getSavedRecipes(req, res) {
+async function getSavedRecipes(req, res) {
   const { collectionId } = req.query;
   let recipes;
 
   if (collectionId !== undefined) {
-    const colId = collectionId === "null" ? null : parseInt(collectionId);
-    recipes = recipeBookModel.getSavedByCollection(CURRENT_USER_ID, colId);
+    const colId = collectionId === "null" ? null : collectionId;
+    recipes = await recipeBookModel.getSavedByCollection(req.userId, colId);
   } else {
-    recipes = recipeBookModel.getSavedRecipes(CURRENT_USER_ID);
+    recipes = await recipeBookModel.getSavedRecipes(req.userId);
   }
 
   res.json(recipes);
 }
 
-function checkSaved(req, res) {
-  const postId = parseInt(req.params.postId);
-  res.json({ saved: recipeBookModel.isRecipeSaved(CURRENT_USER_ID, postId) });
+async function checkSaved(req, res) {
+  const saved = await recipeBookModel.isRecipeSaved(req.userId, req.params.postId);
+  res.json({ saved });
 }
 
-function saveRecipe(req, res) {
-  const postId = parseInt(req.params.postId);
+async function saveRecipe(req, res) {
   const { collectionId = null } = req.body;
-  const result = recipeBookModel.saveRecipe(CURRENT_USER_ID, postId, collectionId);
+  const result = await recipeBookModel.saveRecipe(req.userId, req.params.postId, collectionId);
 
   if (result.error === "already_saved") return res.status(409).json({ error: "Recipe already saved." });
   if (result.error === "not_found") return res.status(404).json({ error: "Recipe not found." });
@@ -32,21 +30,18 @@ function saveRecipe(req, res) {
   res.status(201).json(result.entry);
 }
 
-function unsaveRecipe(req, res) {
-  const postId = parseInt(req.params.postId);
-  const result = recipeBookModel.unsaveRecipe(CURRENT_USER_ID, postId);
+async function unsaveRecipe(req, res) {
+  const result = await recipeBookModel.unsaveRecipe(req.userId, req.params.postId);
 
   if (result.error === "not_found") return res.status(404).json({ error: "Recipe not saved." });
   res.json({ success: true });
 }
 
-function moveToCollection(req, res) {
-  const postId = parseInt(req.params.postId);
+async function moveToCollection(req, res) {
   const { collectionId } = req.body;
-
-  const result = recipeBookModel.moveToCollection(
-    CURRENT_USER_ID,
-    postId,
+  const result = await recipeBookModel.moveToCollection(
+    req.userId,
+    req.params.postId,
     collectionId === null || collectionId === undefined ? null : collectionId
   );
 
@@ -56,30 +51,28 @@ function moveToCollection(req, res) {
   res.json(result.entry);
 }
 
-function getCollections(req, res) {
-  res.json(recipeBookModel.getCollections(CURRENT_USER_ID));
+async function getCollections(req, res) {
+  res.json(await recipeBookModel.getCollections(req.userId));
 }
 
-function createCollection(req, res) {
+async function createCollection(req, res) {
   const { name, description } = req.body;
-  const result = recipeBookModel.createCollection(CURRENT_USER_ID, name, description);
+  const result = await recipeBookModel.createCollection(req.userId, name, description);
 
   if (result.error === "name_required") return res.status(400).json({ error: "Collection name is required." });
 
   res.status(201).json(result.collection);
 }
 
-function updateCollection(req, res) {
-  const collectionId = parseInt(req.params.id);
-  const result = recipeBookModel.updateCollection(CURRENT_USER_ID, collectionId, req.body);
+async function updateCollection(req, res) {
+  const result = await recipeBookModel.updateCollection(req.userId, req.params.id, req.body);
 
   if (result.error === "not_found") return res.status(404).json({ error: "Collection not found." });
   res.json(result.collection);
 }
 
-function deleteCollection(req, res) {
-  const collectionId = parseInt(req.params.id);
-  const result = recipeBookModel.deleteCollection(CURRENT_USER_ID, collectionId);
+async function deleteCollection(req, res) {
+  const result = await recipeBookModel.deleteCollection(req.userId, req.params.id);
 
   if (result.error === "not_found") return res.status(404).json({ error: "Collection not found." });
   res.json({ success: true });

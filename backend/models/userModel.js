@@ -1,24 +1,23 @@
-const { users, posts } = require("../data/mockData");
+const User = require("../schemas/User");
+const Post = require("../schemas/Post");
 
-function findById(id) {
-  return users.find((u) => u.id === parseInt(id));
+async function findById(id) {
+  return User.findById(id).lean();
 }
 
-function getProfile(id) {
-  const user = findById(id);
+async function getProfile(id) {
+  const user = await User.findById(id).lean();
   if (!user) return null;
 
-  const userPosts = posts.filter((p) => p.authorId === user.id);
-  return { ...user, posts: userPosts };
+  const posts = await Post.find({ authorId: user._id }).lean();
+  return { ...user, id: user._id, posts };
 }
 
-function search(query) {
-  const q = query.toLowerCase();
-  return users.filter(
-    (u) =>
-      u.username.toLowerCase().includes(q) ||
-      u.displayName.toLowerCase().includes(q)
-  );
+async function search(query) {
+  const regex = new RegExp(query, "i");
+  return User.find({
+    $or: [{ username: regex }, { displayName: regex }],
+  }).lean();
 }
 
 module.exports = { findById, getProfile, search };

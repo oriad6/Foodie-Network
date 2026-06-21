@@ -1,15 +1,13 @@
-const { CURRENT_USER_ID } = require("../config/constants");
 const commentModel = require("../models/commentModel");
 
-function getComments(req, res) {
-  const postId = parseInt(req.params.postId);
-  res.json(commentModel.getByPostId(postId));
+async function getComments(req, res) {
+  const comments = await commentModel.getByPostId(req.params.postId);
+  res.json(comments);
 }
 
-function createComment(req, res) {
-  const postId = parseInt(req.params.postId);
+async function createComment(req, res) {
   const { text } = req.body;
-  const result = commentModel.create(postId, CURRENT_USER_ID, text);
+  const result = await commentModel.create(req.params.postId, req.userId, text);
 
   if (result.error === "post_not_found") return res.status(404).json({ error: "Post not found." });
   if (result.error === "text_required") return res.status(400).json({ error: "Comment text is required." });
@@ -17,9 +15,8 @@ function createComment(req, res) {
   res.status(201).json(result.comment);
 }
 
-function deleteComment(req, res) {
-  const commentId = parseInt(req.params.commentId);
-  const result = commentModel.deleteComment(commentId, CURRENT_USER_ID);
+async function deleteComment(req, res) {
+  const result = await commentModel.deleteComment(req.params.commentId, req.userId);
 
   if (result.error === "not_found") return res.status(404).json({ error: "Comment not found." });
   if (result.error === "forbidden") return res.status(403).json({ error: "Not authorized to delete this comment." });
@@ -27,9 +24,8 @@ function deleteComment(req, res) {
   res.json({ success: true });
 }
 
-function toggleLike(req, res) {
-  const commentId = parseInt(req.params.commentId);
-  const result = commentModel.toggleLike(commentId, CURRENT_USER_ID);
+async function toggleLike(req, res) {
+  const result = await commentModel.toggleLike(req.params.commentId, req.userId);
 
   if (result.error === "not_found") return res.status(404).json({ error: "Comment not found." });
 

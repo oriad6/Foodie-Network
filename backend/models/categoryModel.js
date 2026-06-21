@@ -1,12 +1,12 @@
-const { categories } = require("../data/mockData");
+const CATEGORIES = ["Italian", "Vegan", "Dessert", "Mexican", "Asian", "American", "Mediterranean"];
 
 function getAll() {
-  return categories;
+  return CATEGORIES;
 }
 
 function search(query) {
   const q = query.toLowerCase();
-  return categories.filter((c) => c.toLowerCase().includes(q));
+  return CATEGORIES.filter((c) => c.toLowerCase().includes(q));
 }
 
 module.exports = { getAll, search };
