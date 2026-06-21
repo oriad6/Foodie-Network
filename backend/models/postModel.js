@@ -108,9 +108,10 @@ async function deletePost(id, userId) {
 
 async function search(query) {
   const regex = new RegExp(query, "i");
-  return Post.find({
+  const posts = await Post.find({
     $or: [{ title: regex }, { category: regex }],
   }).lean();
+  return posts.map((p) => ({ ...p, id: p._id }));
 }
 
 module.exports = {

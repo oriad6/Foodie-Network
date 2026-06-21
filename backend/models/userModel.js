@@ -10,14 +10,16 @@ async function getProfile(id) {
   if (!user) return null;
 
   const posts = await Post.find({ authorId: user._id }).lean();
-  return { ...user, id: user._id, posts };
+  const postsWithId = posts.map((p) => ({ ...p, id: p._id }));
+  return { ...user, id: user._id, posts: postsWithId };
 }
 
 async function search(query) {
   const regex = new RegExp(query, "i");
-  return User.find({
+  const users = await User.find({
     $or: [{ username: regex }, { displayName: regex }],
   }).lean();
+  return users.map((u) => ({ ...u, id: u._id }));
 }
 
 module.exports = { findById, getProfile, search };

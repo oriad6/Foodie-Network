@@ -351,7 +351,7 @@ function PostCard({ post, onDelete, onUpdate }) {
           <div className="flex items-center gap-0.5">
             {[1, 2, 3, 4, 5].map((star) => (
               <button key={star} type="button" onClick={() => handleRating(star)} className={`text-base leading-none transition ${star <= userRating ? "text-amber-400" : "text-gray-200 hover:text-amber-400"}`}>
-                ★
+                {"\u2605"}
               </button>
             ))}
             <span className="text-xs text-text-tertiary ml-1">({avgRating})</span>

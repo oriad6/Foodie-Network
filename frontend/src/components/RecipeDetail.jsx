@@ -316,7 +316,7 @@ function RecipeDetail() {
                 onClick={() => handleRating(star)}
                 className={`text-lg leading-none transition-colors ${star <= userRating ? "text-amber-400" : "text-text-tertiary/30"} hover:text-amber-400`}
               >
-                \u2605
+                {"\u2605"}
               </button>
             ))}
             <span className="text-xs text-text-tertiary ml-1.5">({avgRating})</span>
