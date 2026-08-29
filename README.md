@@ -78,7 +78,7 @@ Run with Docker:
 docker compose up --build
 ```
 
-Open [http://localhost](http://localhost) and start cooking! 🧑‍🍳
+Open and start cooking! 🧑‍🍳
 
 ---
 
@@ -97,8 +97,6 @@ cd backend && node server.js
 # Start frontend (terminal 2)
 cd frontend && npm run dev
 ```
-
-Open [http://localhost:5173](http://localhost:5173)
 
 ### 🌱 Seed the Database
 
